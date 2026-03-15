@@ -5,6 +5,10 @@
 (function () {
   'use strict';
 
+  // Top-level debug - this should ALWAYS print if the script is injected
+  console.log('[PixAI→Pixiv] Content script LOADED on:', window.location.href);
+  console.log('[PixAI→Pixiv] Pathname:', window.location.pathname);
+
   const BUTTON_ID = 'pixai-to-pixiv-btn';
   const PERSISTED_QUERY_HASH = '4f22907317f62a16165260fb32306f98adf084f10d18eac3ed9bc9c2ff6ed2fe';
 
