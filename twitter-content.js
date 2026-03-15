@@ -9,10 +9,10 @@
   const RETRY_INTERVAL = 800;
 
   async function init() {
-    const res = await chrome.runtime.sendMessage({ action: 'getQueue' });
+    const res = await chrome.runtime.sendMessage({ action: 'getQueue', target: 'twitter' });
     const queue = res?.data;
     if (!queue?.length) {
-      console.log('[PixAI→Twitter] Queue is empty');
+      console.log('[PixAI→Twitter] Twitter queue is empty');
       return;
     }
 

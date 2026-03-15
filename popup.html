@@ -98,6 +98,46 @@
     .empty-text { color: #666; font-size: 13px; }
     .empty-sub { color: #444; font-size: 11px; margin-top: 8px; line-height: 1.6; }
 
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 12px;
+      background: #111;
+      border-radius: 10px;
+      padding: 3px;
+    }
+    .tab {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #888;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .tab:hover { color: #ccc; }
+    .tab.active {
+      background: #1a1a2e;
+      color: #fff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .tab-badge {
+      background: #FF6B35;
+      color: white;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 8px;
+    }
+
     /* Help */
     .help {
       margin-top: 14px; padding: 10px;

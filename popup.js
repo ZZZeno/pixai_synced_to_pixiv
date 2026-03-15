@@ -1,33 +1,50 @@
-// PixAI → Pixiv Publisher - Popup (Queue Manager)
+// PixAI → Pixiv / Twitter Publisher - Popup (Dual Queue Manager)
 
 const app = document.getElementById('app');
+let activeTab = 'pixiv'; // 'pixiv' or 'twitter'
 
 async function render() {
   const res = await chrome.runtime.sendMessage({ action: 'getQueue' });
-  const queue = res?.data || [];
+  const pixivQueue = res?.pixiv || res?.data || [];
+  const twitterQueue = res?.twitter || [];
+  const queue = activeTab === 'pixiv' ? pixivQueue : twitterQueue;
+  const otherCount = activeTab === 'pixiv' ? twitterQueue.length : pixivQueue.length;
+
+  const tabsHtml = `
+    <div class="tabs">
+      <button class="tab ${activeTab === 'pixiv' ? 'active' : ''}" data-tab="pixiv">
+        Pixiv ${pixivQueue.length > 0 ? `<span class="tab-badge">${pixivQueue.length}</span>` : ''}
+      </button>
+      <button class="tab ${activeTab === 'twitter' ? 'active' : ''}" data-tab="twitter">
+        𝕏 ${twitterQueue.length > 0 ? `<span class="tab-badge">${twitterQueue.length}</span>` : ''}
+      </button>
+    </div>
+  `;
 
   if (queue.length === 0) {
+    const target = activeTab === 'pixiv' ? 'Pixiv' : '𝕏 (Twitter)';
+    const icon = activeTab === 'pixiv' ? '🎨' : '🐦';
     app.innerHTML = `
       <div class="header">
-        <h2>🎨 PixAI → Pixiv</h2>
+        <h2>${icon} PixAI → ${target}</h2>
       </div>
-      <p class="subtitle">作品をPixivに一括投稿</p>
+      ${tabsHtml}
       <div class="empty">
         <div class="empty-icon">📭</div>
-        <div class="empty-text">投稿キューは空です</div>
+        <div class="empty-text">${target}キューは空です</div>
         <div class="empty-sub">
-          PixAIの作品ページで右下の<br>
-          「Pixivキューに追加」ボタンをクリック
+          PixAIの作品ページで<br>
+          「${target}キューに追加」ボタンをクリック
         </div>
       </div>
       <div class="help">
         <strong>使い方：</strong><br>
-        1️⃣ PixAIで作品を開き、＋でキューに追加<br>
-        2️⃣ 複数作品を追加可能（複数枚投稿）<br>
-        3️⃣ ここで並び替えて投稿をクリック<br>
-        4️⃣ Pixiv投稿ページに自動入力されます
+        1️⃣ PixAIで作品を開き、追加先を選択<br>
+        2️⃣ 複数作品を追加可能<br>
+        3️⃣ ここで並び替えて投稿をクリック
       </div>
     `;
+    bindTabs();
     return;
   }
 
@@ -50,31 +67,38 @@ async function render() {
     `;
   }).join('');
 
+  const target = activeTab === 'pixiv' ? 'Pixiv' : '𝕏';
+  const icon = activeTab === 'pixiv' ? '🎨' : '🐦';
+  const publishAction = activeTab === 'pixiv' ? 'openPixivCreate' : 'openTwitterCompose';
+  const publishLabel = activeTab === 'pixiv' ? '📤 Pixivに投稿' : '📤 𝕏にツイート';
+  const note = activeTab === 'twitter' ? '※ 𝕏は最大4枚まで。5枚以上の場合、先頭4枚が使用されます。' : '複数枚は1つの作品として投稿されます。1枚目が表紙になります。';
+
   app.innerHTML = `
     <div class="header">
-      <h2>🎨 PixAI → Pixiv</h2>
+      <h2>${icon} PixAI → ${target}</h2>
       <span class="queue-count">${queue.length} 枚</span>
     </div>
+    ${tabsHtml}
     <p class="subtitle">ドラッグで並び替え、×で削除</p>
     <div class="queue-list" id="queue-list">${itemsHtml}</div>
     <div class="actions">
-      <button class="btn btn-primary" id="publish-btn">📤 Pixivに投稿</button>
+      <button class="btn btn-primary" id="publish-btn">${publishLabel}</button>
       <button class="btn btn-danger" id="clear-btn">クリア</button>
     </div>
     <div class="help">
-      <strong>ヒント：</strong> 複数枚は1つの作品として投稿されます。1枚目が表紙になります。
+      <strong>ヒント：</strong> ${note}
     </div>
   `;
 
   // Bind events
   document.getElementById('publish-btn').addEventListener('click', () => {
-    chrome.runtime.sendMessage({ action: 'openPixivCreate' });
+    chrome.runtime.sendMessage({ action: publishAction });
     window.close();
   });
 
   document.getElementById('clear-btn').addEventListener('click', async () => {
-    if (confirm(`キュー内の ${queue.length} 枚の作品をクリアしますか？`)) {
-      await chrome.runtime.sendMessage({ action: 'clearQueue' });
+    if (confirm(`${target}キュー内の ${queue.length} 枚の作品をクリアしますか？`)) {
+      await chrome.runtime.sendMessage({ action: 'clearQueue', target: activeTab });
       render();
     }
   });
@@ -84,13 +108,23 @@ async function render() {
     btn.addEventListener('click', async (e) => {
       e.stopPropagation();
       const id = btn.dataset.id;
-      await chrome.runtime.sendMessage({ action: 'removeFromQueue', artworkId: id });
+      await chrome.runtime.sendMessage({ action: 'removeFromQueue', artworkId: id, target: activeTab });
       render();
     });
   });
 
   // Drag & drop reorder
   initDragDrop(queue);
+  bindTabs();
+}
+
+function bindTabs() {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      activeTab = tab.dataset.tab;
+      render();
+    });
+  });
 }
 
 function initDragDrop(queue) {
@@ -121,12 +155,11 @@ function initDragDrop(queue) {
       const dropIdx = parseInt(item.dataset.index);
       if (dragIdx === null || dragIdx === dropIdx) return;
 
-      // Reorder
       const newQueue = [...queue];
       const [moved] = newQueue.splice(dragIdx, 1);
       newQueue.splice(dropIdx, 0, moved);
 
-      await chrome.runtime.sendMessage({ action: 'reorderQueue', queue: newQueue });
+      await chrome.runtime.sendMessage({ action: 'reorderQueue', queue: newQueue, target: activeTab });
       render();
     });
   });

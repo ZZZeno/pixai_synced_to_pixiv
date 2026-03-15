@@ -135,17 +135,27 @@
     const btn = document.createElement('div');
     btn.id = BUTTON_ID;
     btn.innerHTML = `
-      <div class="p2p-btn-inner" id="p2p-add-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
-        <span>Pixivキューに追加</span>
-        <span class="p2p-queue-badge" id="p2p-badge" style="display:none;">0</span>
+      <div class="p2p-btn-row">
+        <div class="p2p-btn-inner" id="p2p-add-pixiv" data-target="pixiv">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span>Pixiv</span>
+          <span class="p2p-queue-badge" id="p2p-badge-pixiv" style="display:none;">0</span>
+        </div>
+        <div class="p2p-btn-inner p2p-btn-twitter" id="p2p-add-twitter" data-target="twitter">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          <span>𝕏</span>
+          <span class="p2p-queue-badge" id="p2p-badge-twitter" style="display:none;">0</span>
+        </div>
       </div>
       <div class="p2p-status" style="display:none;"></div>
     `;
 
-    btn.querySelector('#p2p-add-btn').addEventListener('click', handleAddClick);
+    btn.querySelector('#p2p-add-pixiv').addEventListener('click', () => handleAddClick('pixiv'));
+    btn.querySelector('#p2p-add-twitter').addEventListener('click', () => handleAddClick('twitter'));
     document.body.appendChild(btn);
 
     // Show current queue count
@@ -154,16 +164,23 @@
 
   async function updateQueueBadge() {
     const res = await chrome.runtime.sendMessage({ action: 'getQueue' });
-    const count = res?.data?.length || 0;
-    const badge = document.getElementById('p2p-badge');
-    if (badge) {
-      badge.textContent = count;
-      badge.style.display = count > 0 ? 'inline-flex' : 'none';
+    const pixivCount = res?.pixiv?.length || res?.data?.length || 0;
+    const twitterCount = res?.twitter?.length || 0;
+
+    const bPixiv = document.getElementById('p2p-badge-pixiv');
+    if (bPixiv) {
+      bPixiv.textContent = pixivCount;
+      bPixiv.style.display = pixivCount > 0 ? 'inline-flex' : 'none';
+    }
+    const bTwitter = document.getElementById('p2p-badge-twitter');
+    if (bTwitter) {
+      bTwitter.textContent = twitterCount;
+      bTwitter.style.display = twitterCount > 0 ? 'inline-flex' : 'none';
     }
   }
 
-  async function handleAddClick() {
-    const inner = document.getElementById('p2p-add-btn');
+  async function handleAddClick(target) {
+    const inner = document.getElementById(target === 'twitter' ? 'p2p-add-twitter' : 'p2p-add-pixiv');
     const status = document.querySelector('#' + BUTTON_ID + ' .p2p-status');
     const originalHtml = inner.innerHTML;
 
@@ -187,36 +204,37 @@
       }
 
       // Add to queue
-      const result = await chrome.runtime.sendMessage({ action: 'addToQueue', data });
+      const result = await chrome.runtime.sendMessage({ action: 'addToQueue', data, target });
       const queueLen = result.queueLength;
 
       // Show success
+      const targetLabel = target === 'twitter' ? '𝕏' : 'Pixiv';
       inner.innerHTML = `
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2.5">
           <path d="M20 6L9 17l-5-5"/>
         </svg>
-        <span>追加済み (キュー: ${queueLen})</span>
-        <span class="p2p-queue-badge">${queueLen}</span>
+        <span>✓ ${queueLen}</span>
       `;
 
       // Show preview
       const thumbUrl = data.imageUrls[1] || data.imageUrls[0] || '';
+      const openAction = target === 'twitter' ? 'openTwitterCompose' : 'openPixivCreate';
       status.style.display = 'block';
       status.innerHTML = `
         <div class="p2p-preview">
           ${thumbUrl ? `<img src="${thumbUrl}" class="p2p-thumb">` : ''}
           <div class="p2p-preview-item"><strong>${escapeHtml(data.title || '(untitled)')}</strong></div>
           <div class="p2p-preview-item">${escapeHtml(truncate(data.prompt, 80))}</div>
-          <div class="p2p-preview-item">📐 ${data.imageWidth}×${data.imageHeight}</div>
+          <div class="p2p-preview-item">📐 ${data.imageWidth}×${data.imageHeight} → ${targetLabel}</div>
           <div class="p2p-mini-actions">
-            <button class="p2p-go-btn" id="p2p-go-pixiv">📤 ${queueLen}枚をPixivに投稿</button>
+            <button class="p2p-go-btn" id="p2p-go-publish">📤 ${queueLen}枚を${targetLabel}に投稿</button>
             <button class="p2p-edit-btn" id="p2p-continue">他の作品を追加する</button>
           </div>
         </div>
       `;
 
-      document.getElementById('p2p-go-pixiv').addEventListener('click', () => {
-        chrome.runtime.sendMessage({ action: 'openPixivCreate' });
+      document.getElementById('p2p-go-publish').addEventListener('click', () => {
+        chrome.runtime.sendMessage({ action: openAction });
       });
       document.getElementById('p2p-continue').addEventListener('click', () => {
         resetButton();
@@ -234,15 +252,26 @@
   }
 
   function resetButton() {
-    const inner = document.getElementById('p2p-add-btn');
+    const pixivBtn = document.getElementById('p2p-add-pixiv');
+    const twitterBtn = document.getElementById('p2p-add-twitter');
     const status = document.querySelector('#' + BUTTON_ID + ' .p2p-status');
-    if (inner) {
-      inner.innerHTML = `
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+
+    if (pixivBtn) {
+      pixivBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M12 5v14M5 12h14"/>
         </svg>
-        <span>Pixivキューに追加</span>
-        <span class="p2p-queue-badge" id="p2p-badge" style="display:none;">0</span>
+        <span>Pixiv</span>
+        <span class="p2p-queue-badge" id="p2p-badge-pixiv" style="display:none;">0</span>
+      `;
+    }
+    if (twitterBtn) {
+      twitterBtn.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        <span>𝕏</span>
+        <span class="p2p-queue-badge" id="p2p-badge-twitter" style="display:none;">0</span>
       `;
     }
     if (status) { status.style.display = 'none'; status.innerHTML = ''; }

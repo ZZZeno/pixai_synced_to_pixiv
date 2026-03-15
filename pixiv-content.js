@@ -9,10 +9,10 @@
   const RETRY_INTERVAL = 800;
 
   async function init() {
-    const res = await chrome.runtime.sendMessage({ action: 'getQueue' });
+    const res = await chrome.runtime.sendMessage({ action: 'getQueue', target: 'pixiv' });
     const queue = res?.data;
     if (!queue?.length) {
-      console.log('[PixAI→Pixiv] Queue is empty');
+      console.log('[PixAI→Pixiv] Pixiv queue is empty');
       return;
     }
 
@@ -48,7 +48,7 @@
     });
 
     document.getElementById('p2p-fill-dismiss').addEventListener('click', () => {
-      chrome.runtime.sendMessage({ action: 'clearQueue' });
+      chrome.runtime.sendMessage({ action: 'clearQueue', target: 'pixiv' });
       banner.remove();
     });
   }
@@ -137,7 +137,7 @@
     // Remove banner
     document.getElementById('p2p-pixiv-banner')?.remove();
     // Clear queue
-    chrome.runtime.sendMessage({ action: 'clearQueue' });
+    chrome.runtime.sendMessage({ action: 'clearQueue', target: 'pixiv' });
   }
 
   // ── Multi-image Upload ──────────────────────────────────────────
