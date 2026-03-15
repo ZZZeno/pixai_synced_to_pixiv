@@ -249,6 +249,9 @@
       tags = intersection;
     }
 
+    // Always add PixAI tag
+    if (!tags.includes('PixAI')) tags.push('PixAI');
+
     return tags.slice(0, 10); // Pixiv max 10
   }
 
