@@ -152,9 +152,9 @@
         }
 
         const blob = dataUrlToBlob(response.dataUrl);
-        const imgType = queue[i]?.imageType || 'png';
-        const ext = imgType === 'webp' ? 'webp' : 'png';
-        const mime = imgType === 'webp' ? 'image/webp' : 'image/png';
+        // Background script already converts webp→png, so always use png
+        const mime = response.converted ? 'image/png' : (blob.type || 'image/png');
+        const ext = mime.includes('png') ? 'png' : 'jpg';
         files.push(new File([blob], `pixai_${i + 1}.${ext}`, { type: mime }));
       }
 

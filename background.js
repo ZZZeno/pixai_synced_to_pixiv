@@ -68,19 +68,50 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  // Download image (for Pixiv content script to use)
+  // Download image and convert webp → png for Pixiv compatibility
   if (message.action === 'downloadImage') {
     fetch(message.url, { mode: 'cors' })
       .then(res => res.blob())
       .then(blob => {
+        // If webp, convert to PNG via OffscreenCanvas
+        if (blob.type === 'image/webp' || message.url.includes('.webp') || message.forceConvert) {
+          return convertToPng(blob);
+        }
+        // Already PNG/JPEG, just return as-is
         const reader = new FileReader();
-        reader.onloadend = () => sendResponse({ success: true, dataUrl: reader.result });
+        reader.onloadend = () => sendResponse({ success: true, dataUrl: reader.result, converted: false });
         reader.readAsDataURL(blob);
       })
       .catch(err => sendResponse({ success: false, error: err.message }));
     return true;
   }
 });
+
+// Convert webp blob to PNG using OffscreenCanvas (service worker compatible)
+async function convertToPng(blob) {
+  try {
+    const bitmap = await createImageBitmap(blob);
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close();
+
+    const pngBlob = await canvas.convertToBlob({ type: 'image/png' });
+    const reader = new FileReader();
+    return new Promise((resolve) => {
+      reader.onloadend = () => resolve({ success: true, dataUrl: reader.result, converted: true });
+      reader.readAsDataURL(pngBlob);
+    });
+  } catch (err) {
+    console.error('[PixAI→Pixiv] WebP→PNG conversion failed:', err);
+    // Fallback: return original
+    const reader = new FileReader();
+    return new Promise((resolve) => {
+      reader.onloadend = () => resolve({ success: true, dataUrl: reader.result, converted: false });
+      reader.readAsDataURL(blob);
+    });
+  }
+}
 
 function updateBadge(count) {
   if (count > 0) {
