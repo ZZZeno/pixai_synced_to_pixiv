@@ -165,7 +165,8 @@
     inner.innerHTML = `<div class="p2p-spinner"></div><span>读取中...</span>`;
 
     try {
-      const artworkId = window.location.pathname.match(/\/artwork\/(\d+)/)?.[1];
+      // Extract ID from /artwork/ID or /lang/artwork/ID
+      const artworkId = window.location.pathname.match(/\/artwork\/([^/?]+)/)?.[1];
       if (!artworkId) throw new Error('无法获取作品 ID');
 
       let data;
@@ -256,7 +257,8 @@
   // ── Init ─────────────────────────────────────────────────────────
 
   function init() {
-    if (!window.location.pathname.startsWith('/artwork/')) return;
+    // Support /artwork/ID and /lang/artwork/ID (e.g. /ja/artwork/123)
+    if (!window.location.pathname.match(/\/artwork\//)) return;
     console.log('[PixAI→Pixiv] Init on:', window.location.href);
     setTimeout(createButton, 800);
   }
