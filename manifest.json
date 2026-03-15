@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "PixAI → Pixiv Publisher",
-  "version": "1.0.0",
-  "description": "PixAIの作品をワンクリックでPixivに同期投稿",
+  "name": "PixAI → Pixiv / 𝕏 Publisher",
+  "version": "1.1.0",
+  "description": "PixAIの作品をワンクリックでPixiv・𝕏に同期投稿",
   "permissions": [
     "storage",
     "activeTab",
@@ -12,7 +12,9 @@
     "https://pixai.art/*",
     "https://www.pixiv.net/*",
     "https://*.cloudfront.net/*",
-    "https://*.pixai.art/*"
+    "https://*.pixai.art/*",
+    "https://x.com/*",
+    "https://twitter.com/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -31,6 +33,20 @@
       ],
       "js": ["pixiv-content.js"],
       "css": ["pixiv-content.css"],
+      "run_at": "document_idle"
+    }
+    },
+    {
+      "matches": [
+        "https://x.com/compose/*",
+        "https://x.com/intent/tweet*",
+        "https://twitter.com/compose/*",
+        "https://twitter.com/intent/tweet*",
+        "https://x.com/home*",
+        "https://x.com/*"
+      ],
+      "js": ["twitter-content.js"],
+      "css": ["twitter-content.css"],
       "run_at": "document_idle"
     }
   ],
