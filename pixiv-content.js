@@ -112,7 +112,11 @@
     const ageOk = await setAgeRating('all');
     results.push({ field: '年齢制限', ok: ageOk });
 
-    // ── 6. AI generated flag ──────────────────────────────────────
+    // ── 6. Sexual content - always 無
+    const sexOk = await setSexualContent('none');
+    results.push({ field: '性描写', ok: sexOk });
+
+    // ── 7. AI generated flag ──────────────────────────────────────
     const aiOk = await setAIFlag();
     results.push({ field: 'AI生成', ok: aiOk });
 
@@ -361,6 +365,38 @@
     }
 
     console.warn('[PixAI→Pixiv] AI flag (是/否) group not found');
+    return false;
+  }
+
+  async function setSexualContent(level) {
+    console.log(`[PixAI→Pixiv] Setting sexual content: ${level}`);
+
+    // Find the radio group: "无有（含有轻度描写）"
+    const radioGroups = document.querySelectorAll('.charcoal-radio-group');
+
+    for (const group of radioGroups) {
+      const groupText = group.textContent?.replace(/\s+/g, '') || '';
+
+      // This group contains "无" and "有" with description about 描写/描寫
+      if ((groupText.includes('无') || groupText.includes('無')) && groupText.includes('描写')) {
+        const targetText = (level === 'none') ? null : null; // always pick first option (无/無)
+        const labels = group.querySelectorAll('.charcoal-radio__label');
+
+        // First label is "无"/"無" (none)
+        if (labels.length > 0) {
+          const firstLabel = labels[0];
+          firstLabel.click();
+          await sleep(100);
+          const input = firstLabel.querySelector('input');
+          if (input) input.click();
+          await sleep(200);
+          console.log(`[PixAI→Pixiv] Sexual content set to: ${firstLabel.textContent?.trim()} ✓`);
+          return true;
+        }
+      }
+    }
+
+    console.warn('[PixAI→Pixiv] Sexual content radio group not found');
     return false;
   }
 
