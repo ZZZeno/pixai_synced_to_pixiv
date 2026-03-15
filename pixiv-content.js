@@ -332,99 +332,69 @@
   }
 
   async function setAIFlag() {
-    console.log('[PixAI→Pixiv] Looking for AI flag...');
+    console.log('[PixAI→Pixiv] Looking for AI flag (是/否 radio group)...');
 
-    // Pixiv AI flag keywords (covers known Pixiv wordings)
-    const aiKeywords = [
-      'aiを利用', 'ai利用', 'aiツール', 'ai生成', 'aiが生成',
-      'ai-generated', 'ai generated', 'ai作成', '利用した',
-      'ai制作', 'ai使用',
-    ];
+    // Pixiv's AI flag is a 是/否 radio group.
+    // Find the charcoal-radio-group whose combined text is "是否"
+    const radioGroups = document.querySelectorAll('.charcoal-radio-group');
 
-    // Strategy 1: charcoal radio/checkbox labels (Pixiv's design system)
-    const charcoalLabels = document.querySelectorAll(
-      '.charcoal-radio__label, .charcoal-checkbox__label, [class*="charcoal"] label'
-    );
-    for (const el of charcoalLabels) {
-      const t = (el.textContent || '').toLowerCase().trim();
-      for (const kw of aiKeywords) {
-        if (t.includes(kw)) {
-          el.click();
-          await sleep(200);
-          console.log('[PixAI→Pixiv] AI flag set via charcoal label:', t);
-          return true;
+    for (const group of radioGroups) {
+      const groupText = group.textContent?.replace(/\s+/g, '') || '';
+
+      // The AI flag group contains exactly "是否"
+      if (groupText === '是否') {
+        // Click the "是" label inside this group
+        const labels = group.querySelectorAll('.charcoal-radio__label');
+        for (const label of labels) {
+          if (label.textContent?.trim() === '是') {
+            label.click();
+            await sleep(100);
+            // Also click inner input if exists
+            const input = label.querySelector('input');
+            if (input) input.click();
+            await sleep(200);
+            console.log('[PixAI→Pixiv] AI flag set to 是 ✓');
+            return true;
+          }
         }
       }
     }
 
-    // Strategy 2: Any clickable element with AI keywords
-    const allEls = document.querySelectorAll(
-      'label, [role="radio"], [role="checkbox"], [role="button"], [role="switch"], [role="option"], button, select option'
-    );
-    for (const el of allEls) {
-      const t = (el.textContent || '').toLowerCase().trim();
-      if (!t) continue;
-      for (const kw of aiKeywords) {
-        if (t.includes(kw)) {
-          const input = el.querySelector('input');
-          if (input) { input.click(); } else { el.click(); }
-          await sleep(200);
-          console.log('[PixAI→Pixiv] AI flag set:', t.substring(0, 60));
-          return true;
-        }
-      }
-    }
-
-    // Strategy 3: Dump ALL form elements for debugging
-    console.warn('[PixAI→Pixiv] AI flag NOT FOUND. Dumping all labels/radios:');
-    document.querySelectorAll('label, [role="radio"], [role="checkbox"], [class*="charcoal"]').forEach(el => {
-      const t = el.textContent?.trim();
-      if (t && t.length < 100) console.log(`  <${el.tagName}> class="${el.className?.substring(0, 50)}" → "${t}"`);
-    });
-
+    console.warn('[PixAI→Pixiv] AI flag (是/否) group not found');
     return false;
   }
 
   async function setAgeRating(rating) {
     console.log(`[PixAI→Pixiv] Setting age rating: ${rating}`);
 
-    const ratingKeywords = {
-      'all': ['全年齢', '全年龄', 'all ages'],
-      'r18': ['r-18'],
-      'r18g': ['r-18g'],
-    };
-    const keywords = ratingKeywords[rating] || ratingKeywords['all'];
+    // Find the age rating radio group: "全年龄R-18R-18G"
+    const radioGroups = document.querySelectorAll('.charcoal-radio-group');
 
-    // Target Pixiv's charcoal radio labels directly
-    const labels = document.querySelectorAll('.charcoal-radio__label, label');
+    for (const group of radioGroups) {
+      const groupText = group.textContent?.replace(/\s+/g, '') || '';
 
-    for (const label of labels) {
-      const t = (label.textContent || '').trim();
+      if (groupText.includes('全年') && groupText.includes('R-18')) {
+        // This is the age rating group
+        const targetText = rating === 'all' ? '全年龄' : (rating === 'r18' ? 'R-18' : 'R-18G');
 
-      for (const kw of keywords) {
-        // Exact-ish match (avoid "R-18G" matching "R-18")
-        const tClean = t.replace(/\s+/g, '').toLowerCase();
-        const kwClean = kw.replace(/\s+/g, '').toLowerCase();
-
-        if (tClean === kwClean || (rating === 'all' && tClean.includes(kwClean))) {
-          console.log(`[PixAI→Pixiv] Age rating match: "${t}" for ${rating}`);
-
-          // Click the label - Pixiv's charcoal radios respond to label clicks
-          label.click();
-          await sleep(100);
-
-          // Also try clicking any input inside
-          const input = label.querySelector('input');
-          if (input) input.click();
-
-          await sleep(200);
-          console.log(`[PixAI→Pixiv] Age rating set to: ${rating}`);
-          return true;
+        const labels = group.querySelectorAll('.charcoal-radio__label');
+        for (const label of labels) {
+          const t = label.textContent?.trim();
+          // Exact match to avoid R-18 matching R-18G
+          if (t === targetText) {
+            label.click();
+            await sleep(100);
+            const input = label.querySelector('input');
+            if (input) input.click();
+            await sleep(200);
+            console.log(`[PixAI→Pixiv] Age rating set to: ${t} ✓`);
+            return true;
+          }
         }
       }
     }
 
-    console.warn(`[PixAI→Pixiv] Age rating "${rating}" not found`);
+    console.warn(`[PixAI→Pixiv] Age rating group not found`);
     return false;
   }
 
