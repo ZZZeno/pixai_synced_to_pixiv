@@ -1,0 +1,122 @@
+/* PixAI → Pixiv Publisher - PixAI side styles */
+
+#pixai-to-pixiv-btn {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 99999;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.p2p-btn-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: linear-gradient(135deg, #0096FA 0%, #0062D6 100%);
+  color: white;
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 16px rgba(0, 150, 250, 0.35);
+  transition: all 0.2s ease;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.p2p-btn-inner:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 150, 250, 0.45);
+}
+
+.p2p-btn-inner:active { transform: translateY(0); }
+
+.p2p-queue-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  background: #FF6B35;
+  color: white;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.p2p-spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: p2p-spin 0.6s linear infinite;
+}
+
+@keyframes p2p-spin { to { transform: rotate(360deg); } }
+
+.p2p-status {
+  margin-top: 8px;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 12px;
+  max-width: 340px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.p2p-thumb {
+  width: 100%;
+  max-height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.p2p-preview-item {
+  color: #ccc;
+  font-size: 12px;
+  margin-bottom: 4px;
+  line-height: 1.5;
+  word-break: break-all;
+}
+
+.p2p-preview-item strong { color: #fff; }
+
+.p2p-mini-actions {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.p2p-go-btn {
+  width: 100%;
+  padding: 10px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  background: linear-gradient(135deg, #0096FA, #0062D6);
+  color: white;
+  transition: opacity 0.2s;
+}
+
+.p2p-go-btn:hover { opacity: 0.85; }
+
+.p2p-edit-btn {
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  background: #333;
+  color: #aaa;
+  transition: all 0.2s;
+}
+
+.p2p-edit-btn:hover { background: #444; color: #fff; }

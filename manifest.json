@@ -1,0 +1,49 @@
+{
+  "manifest_version": 3,
+  "name": "PixAI → Pixiv Publisher",
+  "version": "1.0.0",
+  "description": "一键将 PixAI 作品同步发布到 Pixiv",
+  "permissions": [
+    "storage",
+    "activeTab",
+    "downloads"
+  ],
+  "host_permissions": [
+    "https://pixai.art/*",
+    "https://www.pixiv.net/*",
+    "https://*.cloudfront.net/*",
+    "https://*.pixai.art/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["https://pixai.art/artwork/*"],
+      "js": ["pixai-content.js"],
+      "css": ["pixai-content.css"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.pixiv.net/illustration/create*",
+        "https://www.pixiv.net/manga/create*"
+      ],
+      "js": ["pixiv-content.js"],
+      "css": ["pixiv-content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    }
+  }
+}
