@@ -108,9 +108,8 @@
       results.push({ field: '标签', ok });
     }
 
-    // ── 5. Age rating (always set - default 全年齢, or R-18 if NSFW)
-    const hasNsfw = queue.some(a => a.isNsfw);
-    const ageOk = await setAgeRating(hasNsfw ? 'r18' : 'all');
+    // ── 5. Age rating - always 全年龄
+    const ageOk = await setAgeRating('all');
     results.push({ field: '年齢制限', ok: ageOk });
 
     // ── 6. AI generated flag ──────────────────────────────────────
