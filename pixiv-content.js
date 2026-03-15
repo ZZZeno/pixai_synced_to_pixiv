@@ -112,7 +112,11 @@
     const ageOk = await setAgeRating('all');
     results.push({ field: '年齢制限', ok: ageOk });
 
-    // ── 6. Sexual content - always 無
+    // ── 6. Sexual content - always 無 (appears after age rating is selected)
+    await waitForElement('.charcoal-radio-group', 5000, (el) => {
+      const t = el.textContent || '';
+      return t.includes('描写') || t.toLowerCase().includes('depiction');
+    });
     const sexOk = await setSexualContent('none');
     results.push({ field: '性描写', ok: sexOk });
 
@@ -490,6 +494,18 @@
   }
 
   function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function waitForElement(selector, timeoutMs = 5000, predicate = null) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const els = document.querySelectorAll(selector);
+      for (const el of els) {
+        if (!predicate || predicate(el)) return el;
+      }
+      await sleep(300);
+    }
+    return null;
+  }
 
   function escapeHtml(s) {
     return !s ? '' : s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
