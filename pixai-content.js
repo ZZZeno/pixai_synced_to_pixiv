@@ -64,34 +64,19 @@
       }
     }
 
-    const params = {};
-    const dp = artwork.taskParameters?.outputs?.detailParameters;
-    if (dp) {
-      params.steps = dp.steps;
-      params.cfg_scale = dp.cfg_scale;
-      params.sampler = dp.sampler;
-      params.seed = dp.seed;
-      params.width = dp.width;
-      params.height = dp.height;
-      params.modelId = dp.modelId;
-    }
-
     return {
       source: 'pixai',
       sourceUrl: `https://pixai.art/artwork/${artwork.id}`,
       artworkId: artwork.id,
       title: artwork.title || '',
       prompt: artwork.prompts || '',
-      naturalPrompt: artwork.extra?.naturalPrompts || '',
       tags,
       imageUrls,
-      imageWidth: artwork.media?.width || params.width || 0,
-      imageHeight: artwork.media?.height || params.height || 0,
+      imageWidth: artwork.media?.width || 0,
+      imageHeight: artwork.media?.height || 0,
       imageType: artwork.media?.imageType || 'webp',
       isNsfw: artwork.isNsfw || false,
       isSensitive: artwork.isSensitive || false,
-      author: artwork.author?.displayName || artwork.author?.username || '',
-      params,
       extractedAt: new Date().toISOString(),
     };
   }

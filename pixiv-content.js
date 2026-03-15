@@ -221,20 +221,19 @@
   function buildCaption(queue) {
     if (queue.length === 1) {
       const a = queue[0];
+      // Just the title/prompt + source link, no generation params
       let parts = [];
-      if (a.prompt) parts.push(a.prompt);
-      if (a.sourceUrl) parts.push(`\nSource: ${a.sourceUrl}`);
+      if (a.title) parts.push(a.title);
+      if (a.sourceUrl) parts.push(a.sourceUrl);
       return parts.join('\n');
     }
 
-    // Multi-image: combine prompts with page numbers
+    // Multi-image: just titles + source links
     let lines = [];
     queue.forEach((a, i) => {
-      lines.push(`[${i + 1}] ${a.title || ''}`);
-      if (a.prompt) lines.push(a.prompt);
-      lines.push('');
+      if (a.title) lines.push(`[${i + 1}] ${a.title}`);
+      if (a.sourceUrl) lines.push(a.sourceUrl);
     });
-    lines.push('Generated on PixAI');
     return lines.join('\n').trim();
   }
 
