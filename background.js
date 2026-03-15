@@ -72,17 +72,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === 'downloadImage') {
     fetch(message.url, { mode: 'cors' })
       .then(res => res.blob())
-      .then(blob => {
+      .then(async (blob) => {
+        console.log('[PixAI→Pixiv] Downloaded image:', blob.type, blob.size, 'bytes');
         // If webp, convert to PNG via OffscreenCanvas
-        if (blob.type === 'image/webp' || message.url.includes('.webp') || message.forceConvert) {
-          return convertToPng(blob);
+        if (blob.type === 'image/webp' || message.url.includes('webp') || message.forceConvert) {
+          console.log('[PixAI→Pixiv] Converting WebP → PNG...');
+          const result = await convertToPng(blob);
+          console.log('[PixAI→Pixiv] Conversion done, converted:', result.converted);
+          sendResponse(result);
+        } else {
+          // Already PNG/JPEG, return as-is
+          const reader = new FileReader();
+          reader.onloadend = () => sendResponse({ success: true, dataUrl: reader.result, converted: false });
+          reader.readAsDataURL(blob);
         }
-        // Already PNG/JPEG, just return as-is
-        const reader = new FileReader();
-        reader.onloadend = () => sendResponse({ success: true, dataUrl: reader.result, converted: false });
-        reader.readAsDataURL(blob);
       })
-      .catch(err => sendResponse({ success: false, error: err.message }));
+      .catch(err => {
+        console.error('[PixAI→Pixiv] Download failed:', err);
+        sendResponse({ success: false, error: err.message });
+      });
     return true;
   }
 });
