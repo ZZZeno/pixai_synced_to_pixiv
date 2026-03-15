@@ -11,21 +11,21 @@ async function render() {
       <div class="header">
         <h2>🎨 PixAI → Pixiv</h2>
       </div>
-      <p class="subtitle">批量同步作品到 Pixiv</p>
+      <p class="subtitle">作品をPixivに一括投稿</p>
       <div class="empty">
         <div class="empty-icon">📭</div>
-        <div class="empty-text">发布队列为空</div>
+        <div class="empty-text">投稿キューは空です</div>
         <div class="empty-sub">
-          打开 PixAI 作品页面，点击右下角<br>
-          「添加到 Pixiv 队列」按钮
+          PixAIの作品ページで右下の<br>
+          「Pixivキューに追加」ボタンをクリック
         </div>
       </div>
       <div class="help">
-        <strong>使用流程：</strong><br>
-        1️⃣ 在 PixAI 浏览作品，点击 ＋ 添加到队列<br>
-        2️⃣ 可添加多个作品（多图投稿）<br>
-        3️⃣ 在这里调整顺序，点击发布<br>
-        4️⃣ Pixiv 发布页自动填入所有信息
+        <strong>使い方：</strong><br>
+        1️⃣ PixAIで作品を開き、＋でキューに追加<br>
+        2️⃣ 複数作品を追加可能（複数枚投稿）<br>
+        3️⃣ ここで並び替えて投稿をクリック<br>
+        4️⃣ Pixiv投稿ページに自動入力されます
       </div>
     `;
     return;
@@ -45,7 +45,7 @@ async function render() {
           <div class="queue-item-title">${esc(title)}${nsfw}</div>
           <div class="queue-item-meta">${dims} · ${item.tags?.slice(0, 3).join(', ') || 'no tags'}</div>
         </div>
-        <button class="queue-item-remove" data-id="${esc(item.artworkId)}" title="移除">×</button>
+        <button class="queue-item-remove" data-id="${esc(item.artworkId)}" title="削除">×</button>
       </div>
     `;
   }).join('');
@@ -53,16 +53,16 @@ async function render() {
   app.innerHTML = `
     <div class="header">
       <h2>🎨 PixAI → Pixiv</h2>
-      <span class="queue-count">${queue.length} 张</span>
+      <span class="queue-count">${queue.length} 枚</span>
     </div>
-    <p class="subtitle">拖拽调整顺序，点击 × 移除</p>
+    <p class="subtitle">ドラッグで並び替え、×で削除</p>
     <div class="queue-list" id="queue-list">${itemsHtml}</div>
     <div class="actions">
-      <button class="btn btn-primary" id="publish-btn">📤 发布到 Pixiv</button>
-      <button class="btn btn-danger" id="clear-btn">清空</button>
+      <button class="btn btn-primary" id="publish-btn">📤 Pixivに投稿</button>
+      <button class="btn btn-danger" id="clear-btn">クリア</button>
     </div>
     <div class="help">
-      <strong>提示：</strong> 多图将作为一个多页作品发布。第一张图为封面。
+      <strong>ヒント：</strong> 複数枚は1つの作品として投稿されます。1枚目が表紙になります。
     </div>
   `;
 
@@ -73,7 +73,7 @@ async function render() {
   });
 
   document.getElementById('clear-btn').addEventListener('click', async () => {
-    if (confirm(`确定清空队列中的 ${queue.length} 张作品？`)) {
+    if (confirm(`キュー内の ${queue.length} 枚の作品をクリアしますか？`)) {
       await chrome.runtime.sendMessage({ action: 'clearQueue' });
       render();
     }

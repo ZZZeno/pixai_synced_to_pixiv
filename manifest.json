@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "PixAI → Pixiv Publisher",
   "version": "1.0.0",
-  "description": "一键将 PixAI 作品同步发布到 Pixiv",
+  "description": "PixAIの作品をワンクリックでPixivに同期投稿",
   "permissions": [
     "storage",
     "activeTab",

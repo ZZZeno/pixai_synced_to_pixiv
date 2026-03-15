@@ -24,8 +24,8 @@
     const banner = document.createElement('div');
     banner.id = 'p2p-pixiv-banner';
     const title = queue.length === 1
-      ? `1 张作品待发布: ${queue[0].title || '(untitled)'}`
-      : `${queue.length} 张作品待批量发布`;
+      ? `1枚の作品を投稿予定: ${queue[0].title || '(untitled)'}`
+      : `${queue.length} 枚の作品を一括投稿`;
 
     banner.innerHTML = `
       <div class="p2p-banner-inner">
@@ -34,8 +34,8 @@
           <span class="p2p-banner-title">${escapeHtml(title)}</span>
         </div>
         <div class="p2p-banner-actions" id="p2p-banner-actions">
-          <button id="p2p-fill-all" class="p2p-fill-btn primary">一键填入</button>
-          <button id="p2p-fill-dismiss" class="p2p-fill-btn secondary">忽略</button>
+          <button id="p2p-fill-all" class="p2p-fill-btn primary">一括入力</button>
+          <button id="p2p-fill-dismiss" class="p2p-fill-btn secondary">無視</button>
         </div>
       </div>
     `;
@@ -43,7 +43,7 @@
 
     document.getElementById('p2p-fill-all').addEventListener('click', async () => {
       const actions = document.getElementById('p2p-banner-actions');
-      actions.innerHTML = '<span class="p2p-filling">⏳ 正在填入 ' + queue.length + ' 张作品...</span>';
+      actions.innerHTML = '<span class="p2p-filling">⏳ 入力中 ' + queue.length + ' 枚の作品...</span>';
       await fillAll(queue);
     });
 
@@ -56,7 +56,7 @@
   async function fillAll(queue) {
     const formReady = await waitForForm();
     if (!formReady) {
-      showNotification('页面表单加载超时', 'error');
+      showNotification('ページの読み込みがタイムアウトしました', 'error');
       return;
     }
 
@@ -65,9 +65,9 @@
     // ── 1. Upload all images ──────────────────────────────────────
     const imageUrls = queue.map(a => a.imageUrls?.[0]).filter(Boolean);
     if (imageUrls.length > 0) {
-      showNotification(`正在下载并上传 ${imageUrls.length} 张图片...`, 'loading');
+      showNotification(`画像をダウンロード&アップロード中 ${imageUrls.length} 枚...`, 'loading');
       const imgOk = await uploadImages(imageUrls, queue);
-      results.push({ field: `图片(${imageUrls.length})`, ok: imgOk });
+      results.push({ field: `画像(${imageUrls.length})`, ok: imgOk });
       if (imgOk) await sleep(2000);
     }
 
@@ -84,7 +84,7 @@
         'input[name="title"]',
         'input[name*="title" i]',
       ]);
-      results.push({ field: '标题', ok });
+      results.push({ field: 'タイトル', ok });
     }
 
     // ── 3. Caption / Description ──────────────────────────────────
@@ -98,14 +98,14 @@
         'textarea[name*="caption" i]',
         'textarea[name*="description" i]',
       ], true);
-      results.push({ field: '描述', ok });
+      results.push({ field: '説明', ok });
     }
 
     // ── 4. Tags ───────────────────────────────────────────────────
     const allTags = buildMergedTags(queue);
     if (allTags.length > 0) {
       const ok = await fillTags(allTags);
-      results.push({ field: '标签', ok });
+      results.push({ field: 'タグ', ok });
     }
 
     // ── 5. Age rating - always 全年龄
@@ -114,16 +114,16 @@
 
     // ── 6. AI generated flag ──────────────────────────────────────
     const aiOk = await setAIFlag();
-    results.push({ field: 'AI標記', ok: aiOk });
+    results.push({ field: 'AI生成', ok: aiOk });
 
     // ── Done ──────────────────────────────────────────────────────
     const okCount = results.filter(r => r.ok).length;
     const failedFields = results.filter(r => !r.ok).map(r => r.field);
 
     if (failedFields.length === 0) {
-      showNotification(`✅ ${queue.length} 张作品信息已全部填入！请检查后发布`, 'success');
+      showNotification(`✅ ${queue.length} 枚の作品...全部填入！请检查后发布`, 'success');
     } else {
-      showNotification(`已填入 ${okCount} 项，${failedFields.join('、')} 需手动处理`, 'warning');
+      showNotification(`入力済み ${okCount} 件，${failedFields.join('、')} は手動で入力してください`, 'warning');
     }
 
     // Remove banner
@@ -139,7 +139,7 @@
       // Download all images
       const files = [];
       for (let i = 0; i < imageUrls.length; i++) {
-        showNotification(`正在下载图片 ${i + 1}/${imageUrls.length}...`, 'loading');
+        showNotification(`画像をダウンロード中 ${i + 1}/${imageUrls.length}...`, 'loading');
         const response = await chrome.runtime.sendMessage({
           action: 'downloadImage',
           url: imageUrls[i]
@@ -159,7 +159,7 @@
 
       if (files.length === 0) return false;
 
-      showNotification(`正在上传 ${files.length} 张图片...`, 'loading');
+      showNotification(`アップロード中 ${files.length} 枚...`, 'loading');
 
       // Method 1: File input (supports multiple files)
       const fileInput = document.querySelector('input[type="file"][accept*="image"]')
@@ -304,7 +304,7 @@
     const tagSelectors = [
       'input[placeholder*="タグ"]',
       'input[placeholder*="tag" i]',
-      'input[placeholder*="标签"]',
+      'input[placeholder*="タグ"]',
       '[class*="tag" i] input[type="text"]',
     ];
 

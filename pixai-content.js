@@ -43,7 +43,7 @@
     const json = await res.json();
 
     if (!json.data?.artwork) {
-      throw new Error('API 返回空数据，请确认作品存在且可访问');
+      throw new Error('APIデータが空です。作品が存在するか確認してください');
     }
 
     return parseArtworkResponse(json.data.artwork);
@@ -139,7 +139,7 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M12 5v14M5 12h14"/>
         </svg>
-        <span>添加到 Pixiv 队列</span>
+        <span>Pixivキューに追加</span>
         <span class="p2p-queue-badge" id="p2p-badge" style="display:none;">0</span>
       </div>
       <div class="p2p-status" style="display:none;"></div>
@@ -167,12 +167,12 @@
     const status = document.querySelector('#' + BUTTON_ID + ' .p2p-status');
     const originalHtml = inner.innerHTML;
 
-    inner.innerHTML = `<div class="p2p-spinner"></div><span>读取中...</span>`;
+    inner.innerHTML = `<div class="p2p-spinner"></div><span>読み込み中...</span>`;
 
     try {
       // Extract ID from /artwork/ID or /lang/artwork/ID
       const artworkId = window.location.pathname.match(/\/artwork\/([^/?]+)/)?.[1];
-      if (!artworkId) throw new Error('无法获取作品 ID');
+      if (!artworkId) throw new Error('作品IDを取得できません');
 
       let data;
       try {
@@ -183,7 +183,7 @@
       }
 
       if (!data.prompt && data.imageUrls.length === 0) {
-        throw new Error('无法读取作品信息');
+        throw new Error('作品情報を読み込めません');
       }
 
       // Add to queue
@@ -195,7 +195,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4CAF50" stroke-width="2.5">
           <path d="M20 6L9 17l-5-5"/>
         </svg>
-        <span>已添加 (队列: ${queueLen})</span>
+        <span>追加済み (キュー: ${queueLen})</span>
         <span class="p2p-queue-badge">${queueLen}</span>
       `;
 
@@ -209,8 +209,8 @@
           <div class="p2p-preview-item">${escapeHtml(truncate(data.prompt, 80))}</div>
           <div class="p2p-preview-item">📐 ${data.imageWidth}×${data.imageHeight}</div>
           <div class="p2p-mini-actions">
-            <button class="p2p-go-btn" id="p2p-go-pixiv">📤 发布 ${queueLen} 张到 Pixiv</button>
-            <button class="p2p-edit-btn" id="p2p-continue">继续添加其他作品</button>
+            <button class="p2p-go-btn" id="p2p-go-pixiv">📤 ${queueLen}枚をPixivに投稿</button>
+            <button class="p2p-edit-btn" id="p2p-continue">他の作品を追加する</button>
           </div>
         </div>
       `;
@@ -241,7 +241,7 @@
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <path d="M12 5v14M5 12h14"/>
         </svg>
-        <span>添加到 Pixiv 队列</span>
+        <span>Pixivキューに追加</span>
         <span class="p2p-queue-badge" id="p2p-badge" style="display:none;">0</span>
       `;
     }
