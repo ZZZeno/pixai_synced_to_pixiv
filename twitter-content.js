@@ -210,83 +210,33 @@
 
   async function uploadImages(imageUrls) {
     try {
-      // Find the file input for image upload
-      // Twitter uses a hidden file input
-      let fileInput = document.querySelector('input[data-testid="fileInput"]')
-        || document.querySelector('input[type="file"][accept*="image"]');
-
-      if (!fileInput) {
-        // Try clicking the media button to reveal the input
-        const mediaBtn = document.querySelector('[data-testid="tweetMediaButton"]')
-          || document.querySelector('[aria-label*="Media"]')
-          || document.querySelector('[aria-label*="メディア"]')
-          || document.querySelector('[aria-label*="media"]');
-        if (mediaBtn) {
-          mediaBtn.click();
-          await sleep(500);
-          fileInput = document.querySelector('input[data-testid="fileInput"]')
-            || document.querySelector('input[type="file"][accept*="image"]');
-        }
-      }
-
-      if (!fileInput) {
-        console.warn('[PixAI→Twitter] File input not found');
-        return false;
-      }
-
-      // Download all images and convert to File objects
+      // Download all images first
       const files = [];
       for (let i = 0; i < imageUrls.length; i++) {
         const url = imageUrls[i];
         console.log(`[PixAI→Twitter] Downloading image ${i + 1}/${imageUrls.length}: ${url}`);
 
         try {
-          // Use background script to download (avoid CORS)
           const response = await chrome.runtime.sendMessage({
             action: 'downloadImage',
             url: url,
           });
 
-          if (response?.data) {
-            // Convert base64 to File
-            const binary = atob(response.data);
-            const bytes = new Uint8Array(binary.length);
-            for (let j = 0; j < binary.length; j++) {
-              bytes[j] = binary.charCodeAt(j);
-            }
+          if (response?.dataUrl) {
+            // dataUrl is "data:image/jpeg;base64,..."
+            const res = await fetch(response.dataUrl);
+            const blob = await res.blob();
+            const contentType = blob.type || 'image/jpeg';
+            const ext = contentType.includes('png') ? 'png' : 'jpg';
 
-            // Determine content type
-            const contentType = response.contentType || 'image/jpeg';
-            const ext = contentType.includes('png') ? 'png' : contentType.includes('webp') ? 'webp' : 'jpg';
-
-            // Convert WebP to PNG if needed
-            let blob;
-            if (contentType.includes('webp')) {
-              console.log('[PixAI→Twitter] Converting WebP to PNG...');
-              const converted = await chrome.runtime.sendMessage({
-                action: 'convertWebpToPng',
-                data: response.data,
-              });
-              if (converted?.data) {
-                const pngBinary = atob(converted.data);
-                const pngBytes = new Uint8Array(pngBinary.length);
-                for (let j = 0; j < pngBinary.length; j++) {
-                  pngBytes[j] = pngBinary.charCodeAt(j);
-                }
-                blob = new Blob([pngBytes], { type: 'image/png' });
-              } else {
-                blob = new Blob([bytes], { type: contentType });
-              }
-            } else {
-              blob = new Blob([bytes], { type: contentType });
-            }
-
-            const file = new File([blob], `pixai_${i + 1}.${ext === 'webp' ? 'png' : ext}`, {
-              type: blob.type,
+            const file = new File([blob], `pixai_${i + 1}.${ext}`, {
+              type: contentType,
               lastModified: Date.now(),
             });
             files.push(file);
             console.log(`[PixAI→Twitter] Image ${i + 1} ready: ${file.name} (${(file.size / 1024).toFixed(1)}KB)`);
+          } else {
+            console.warn(`[PixAI→Twitter] No dataUrl in response for image ${i + 1}`);
           }
         } catch (e) {
           console.error(`[PixAI→Twitter] Failed to download image ${i + 1}:`, e);
@@ -298,24 +248,106 @@
         return false;
       }
 
-      // Create DataTransfer and set files
+      // Find the hidden file input — Twitter always has one in compose
+      let fileInput = document.querySelector('input[data-testid="fileInput"]')
+        || document.querySelector('input[type="file"][accept*="image"]');
+
+      if (!fileInput) {
+        // Click media button to ensure input exists
+        const mediaBtn = document.querySelector('[data-testid="tweetMediaButton"]')
+          || document.querySelector('[aria-label*="Media"]')
+          || document.querySelector('[aria-label*="メディア"]')
+          || document.querySelector('[aria-label*="media"]')
+          || document.querySelector('[aria-label*="画像"]');
+        if (mediaBtn) {
+          mediaBtn.click();
+          await sleep(800);
+        }
+        fileInput = document.querySelector('input[data-testid="fileInput"]')
+          || document.querySelector('input[type="file"][accept*="image"]');
+      }
+
+      if (!fileInput) {
+        // Last resort: find any file input on page
+        const allInputs = document.querySelectorAll('input[type="file"]');
+        console.log(`[PixAI→Twitter] Found ${allInputs.length} file inputs`);
+        for (const inp of allInputs) {
+          console.log(`[PixAI→Twitter]   accept="${inp.accept}" testid="${inp.dataset?.testid}"`);
+        }
+        fileInput = allInputs[0];
+      }
+
+      if (!fileInput) {
+        console.error('[PixAI→Twitter] File input not found anywhere');
+        return false;
+      }
+
+      console.log(`[PixAI→Twitter] Using file input:`, fileInput.accept, fileInput.dataset?.testid);
+
+      // Use DataTransfer to set files and dispatch change event
       const dt = new DataTransfer();
       files.forEach(f => dt.items.add(f));
 
-      // Set files on the input
-      Object.defineProperty(fileInput, 'files', {
-        value: dt.files,
-        writable: true,
-        configurable: true,
-      });
+      // Native setter to bypass React's control
+      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'files')?.set;
+      if (nativeSetter) {
+        nativeSetter.call(fileInput, dt.files);
+      } else {
+        fileInput.files = dt.files;
+      }
 
-      fileInput.dispatchEvent(new Event('change', { bubbles: true }));
-      await sleep(1000);
+      // Dispatch both change and input events
+      fileInput.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+      fileInput.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+      await sleep(1500);
+
+      // Verify images appeared (check for image preview thumbnails)
+      const previews = document.querySelectorAll('[data-testid="attachments"] img, [data-testid="mediaPreview"] img');
+      if (previews.length > 0) {
+        console.log(`[PixAI→Twitter] ${previews.length} image previews detected ✓`);
+      } else {
+        console.warn('[PixAI→Twitter] No image previews detected — upload may have failed');
+        // Try drag-and-drop as fallback
+        console.log('[PixAI→Twitter] Trying drag-and-drop fallback...');
+        return await uploadViaDropFallback(files);
+      }
 
       console.log(`[PixAI→Twitter] ${files.length} images uploaded ✓`);
       return true;
     } catch (e) {
       console.error('[PixAI→Twitter] Image upload failed:', e);
+      return false;
+    }
+  }
+
+  async function uploadViaDropFallback(files) {
+    try {
+      const dropTarget = document.querySelector('[data-testid="tweetTextarea_0"]')
+        || document.querySelector('[contenteditable="true"][role="textbox"]');
+
+      if (!dropTarget) {
+        console.error('[PixAI→Twitter] Drop target not found');
+        return false;
+      }
+
+      const dt = new DataTransfer();
+      files.forEach(f => dt.items.add(f));
+
+      const dragEnter = new DragEvent('dragenter', { bubbles: true, dataTransfer: dt });
+      const dragOver = new DragEvent('dragover', { bubbles: true, dataTransfer: dt });
+      const drop = new DragEvent('drop', { bubbles: true, dataTransfer: dt });
+
+      dropTarget.dispatchEvent(dragEnter);
+      await sleep(100);
+      dropTarget.dispatchEvent(dragOver);
+      await sleep(100);
+      dropTarget.dispatchEvent(drop);
+      await sleep(1500);
+
+      console.log('[PixAI→Twitter] Drag-and-drop fallback completed');
+      return true;
+    } catch (e) {
+      console.error('[PixAI→Twitter] Drag-and-drop fallback failed:', e);
       return false;
     }
   }
