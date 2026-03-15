@@ -34,7 +34,6 @@
       "js": ["pixiv-content.js"],
       "css": ["pixiv-content.css"],
       "run_at": "document_idle"
-    }
     },
     {
       "matches": [
