@@ -336,62 +336,82 @@
   }
 
   async function setAIFlag() {
-    console.log('[PixAI→Pixiv] Looking for AI flag (是/否 radio group)...');
+    console.log('[PixAI→Pixiv] Looking for AI flag...');
 
-    // Pixiv's AI flag is a 是/否 radio group.
-    // Find the charcoal-radio-group whose combined text is "是否"
+    // AI flag is a yes/no radio group
+    // zh: 是/否  ja: はい/いいえ  en: Yes/No
+    const yesLabels = ['是', 'はい', 'yes'];
+    const noLabels = ['否', 'いいえ', 'no'];
+
     const radioGroups = document.querySelectorAll('.charcoal-radio-group');
 
     for (const group of radioGroups) {
-      const groupText = group.textContent?.replace(/\s+/g, '') || '';
+      const labels = group.querySelectorAll('.charcoal-radio__label');
+      if (labels.length !== 2) continue;
 
-      // The AI flag group contains exactly "是否"
-      if (groupText === '是否') {
-        // Click the "是" label inside this group
-        const labels = group.querySelectorAll('.charcoal-radio__label');
+      const t0 = labels[0].textContent?.trim().toLowerCase() || '';
+      const t1 = labels[1].textContent?.trim().toLowerCase() || '';
+
+      // Check if this is a yes/no group
+      const isYesNo = (
+        yesLabels.some(y => t0 === y.toLowerCase()) && noLabels.some(n => t1 === n.toLowerCase())
+      ) || (
+        noLabels.some(n => t0 === n.toLowerCase()) && yesLabels.some(y => t1 === y.toLowerCase())
+      );
+
+      if (isYesNo) {
+        // Click the "yes" label
         for (const label of labels) {
-          if (label.textContent?.trim() === '是') {
+          const t = label.textContent?.trim().toLowerCase();
+          if (yesLabels.some(y => t === y.toLowerCase())) {
             label.click();
             await sleep(100);
-            // Also click inner input if exists
             const input = label.querySelector('input');
             if (input) input.click();
             await sleep(200);
-            console.log('[PixAI→Pixiv] AI flag set to 是 ✓');
+            console.log(`[PixAI→Pixiv] AI flag set to "${label.textContent?.trim()}" ✓`);
             return true;
           }
         }
       }
     }
 
-    console.warn('[PixAI→Pixiv] AI flag (是/否) group not found');
+    console.warn('[PixAI→Pixiv] AI flag (yes/no) group not found');
     return false;
   }
 
   async function setSexualContent(level) {
     console.log(`[PixAI→Pixiv] Setting sexual content: ${level}`);
 
-    // Find the radio group: "无有（含有轻度描写）"
+    // Sexual content group has 2 options:
+    // zh: 无 / 有（含有轻度描写）
+    // ja: 無 / 有（軽度な描写を含む）
+    // en: No / Yes (contains mild depictions)
+    // Identify by: 2 options, one contains 描写/depiction
+    const noneLabels = ['无', '無', 'no', 'none'];
+
     const radioGroups = document.querySelectorAll('.charcoal-radio-group');
 
     for (const group of radioGroups) {
-      const groupText = group.textContent?.replace(/\s+/g, '') || '';
+      const groupText = group.textContent || '';
 
-      // This group contains "无" and "有" with description about 描写/描寫
-      if ((groupText.includes('无') || groupText.includes('無')) && groupText.includes('描写')) {
-        const targetText = (level === 'none') ? null : null; // always pick first option (无/無)
+      // Match by keyword: 描写 (zh/ja) or "depiction"/"description" (en)
+      if (groupText.includes('描写') || groupText.toLowerCase().includes('depiction')) {
         const labels = group.querySelectorAll('.charcoal-radio__label');
+        if (labels.length !== 2) continue;
 
-        // First label is "无"/"無" (none)
-        if (labels.length > 0) {
-          const firstLabel = labels[0];
-          firstLabel.click();
-          await sleep(100);
-          const input = firstLabel.querySelector('input');
-          if (input) input.click();
-          await sleep(200);
-          console.log(`[PixAI→Pixiv] Sexual content set to: ${firstLabel.textContent?.trim()} ✓`);
-          return true;
+        // Click the "none" option (first one)
+        for (const label of labels) {
+          const t = label.textContent?.trim().toLowerCase();
+          if (noneLabels.some(n => t === n)) {
+            label.click();
+            await sleep(100);
+            const input = label.querySelector('input');
+            if (input) input.click();
+            await sleep(200);
+            console.log(`[PixAI→Pixiv] Sexual content set to: ${label.textContent?.trim()} ✓`);
+            return true;
+          }
         }
       }
     }
@@ -403,27 +423,38 @@
   async function setAgeRating(rating) {
     console.log(`[PixAI→Pixiv] Setting age rating: ${rating}`);
 
-    // Find the age rating radio group: "全年龄R-18R-18G"
+    // Age rating group: 全年龄/全年齢/All ages + R-18 + R-18G
+    const allAgesLabels = ['全年龄', '全年齢', 'all ages'];
     const radioGroups = document.querySelectorAll('.charcoal-radio-group');
 
     for (const group of radioGroups) {
-      const groupText = group.textContent?.replace(/\s+/g, '') || '';
+      const groupText = group.textContent || '';
+      if (!groupText.includes('R-18')) continue;
 
-      if (groupText.includes('全年') && groupText.includes('R-18')) {
-        // This is the age rating group
-        const targetText = rating === 'all' ? '全年龄' : (rating === 'r18' ? 'R-18' : 'R-18G');
-
-        const labels = group.querySelectorAll('.charcoal-radio__label');
+      const labels = group.querySelectorAll('.charcoal-radio__label');
+      if (rating === 'all') {
         for (const label of labels) {
-          const t = label.textContent?.trim();
-          // Exact match to avoid R-18 matching R-18G
-          if (t === targetText) {
+          const t = label.textContent?.trim().toLowerCase();
+          if (allAgesLabels.some(a => t === a.toLowerCase())) {
             label.click();
             await sleep(100);
             const input = label.querySelector('input');
             if (input) input.click();
             await sleep(200);
-            console.log(`[PixAI→Pixiv] Age rating set to: ${t} ✓`);
+            console.log(`[PixAI→Pixiv] Age rating set to: ${label.textContent?.trim()} ✓`);
+            return true;
+          }
+        }
+      } else {
+        const target = rating === 'r18' ? 'R-18' : 'R-18G';
+        for (const label of labels) {
+          if (label.textContent?.trim() === target) {
+            label.click();
+            await sleep(100);
+            const input = label.querySelector('input');
+            if (input) input.click();
+            await sleep(200);
+            console.log(`[PixAI→Pixiv] Age rating set to: ${target} ✓`);
             return true;
           }
         }
