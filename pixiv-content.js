@@ -108,16 +108,14 @@
       results.push({ field: '标签', ok });
     }
 
-    // ── 5. AI generated flag ──────────────────────────────────────
-    const aiOk = await setAIFlag();
-    results.push({ field: 'AI标记', ok: aiOk });
-
-    // ── 6. NSFW ───────────────────────────────────────────────────
+    // ── 5. Age rating (always set - default 全年齢, or R-18 if NSFW)
     const hasNsfw = queue.some(a => a.isNsfw);
-    if (hasNsfw) {
-      const ok = await setAgeRating('r18');
-      results.push({ field: 'R-18', ok });
-    }
+    const ageOk = await setAgeRating(hasNsfw ? 'r18' : 'all');
+    results.push({ field: '年齢制限', ok: ageOk });
+
+    // ── 6. AI generated flag ──────────────────────────────────────
+    const aiOk = await setAIFlag();
+    results.push({ field: 'AI標記', ok: aiOk });
 
     // ── Done ──────────────────────────────────────────────────────
     const okCount = results.filter(r => r.ok).length;
@@ -335,41 +333,102 @@
   }
 
   async function setAIFlag() {
-    const all = document.querySelectorAll(
-      'label, [role="radio"], [role="checkbox"], [role="button"], [role="switch"], button'
-    );
-    for (const el of all) {
-      const t = (el.textContent || '').toLowerCase();
-      if ((t.includes('ai') && (t.includes('生成') || t.includes('generat') || t.includes('作成') || t.includes('使用'))) ||
-        t.includes('aiが生成') || t.includes('ai-generated')) {
-        el.click();
-        await sleep(200);
-        return true;
-      }
-    }
+    console.log('[PixAI→Pixiv] Looking for AI flag...');
 
-    for (const sel of document.querySelectorAll('select')) {
-      for (const opt of sel.options) {
-        if (opt.text?.toLowerCase().includes('ai') && (opt.text.includes('生成') || opt.text.toLowerCase().includes('generat'))) {
-          sel.value = opt.value;
-          sel.dispatchEvent(new Event('change', { bubbles: true }));
+    // Dump all candidate elements for debugging
+    const candidates = document.querySelectorAll(
+      'label, [role="radio"], [role="checkbox"], [role="button"], [role="switch"], [role="option"], button, select, option'
+    );
+
+    // Keywords that indicate "AI generated" option on Pixiv
+    const aiKeywords = [
+      'aiを利用', 'ai利用', 'aiツール', 'ai生成', 'aiが生成',
+      'ai-generated', 'ai generated', 'ai作成',
+      '利用した', // in context of AI tools
+    ];
+
+    for (const el of candidates) {
+      const t = (el.textContent || '').toLowerCase().trim();
+      if (!t) continue;
+
+      for (const kw of aiKeywords) {
+        if (t.includes(kw)) {
+          console.log(`[PixAI→Pixiv] AI flag candidate: <${el.tagName}> "${t.substring(0, 60)}"`);
+
+          // If it's a label with a radio/checkbox inside, click the input
+          const input = el.querySelector('input[type="radio"], input[type="checkbox"]');
+          if (input && !input.checked) {
+            input.click();
+            await sleep(200);
+            console.log('[PixAI→Pixiv] AI flag set via inner input');
+            return true;
+          }
+
+          // Otherwise click the element itself
+          el.click();
+          await sleep(200);
+          console.log('[PixAI→Pixiv] AI flag set via click');
           return true;
         }
       }
     }
+
+    // Try select dropdowns
+    for (const select of document.querySelectorAll('select')) {
+      for (const opt of select.options) {
+        const t = (opt.text || '').toLowerCase();
+        if (t.includes('ai') && (t.includes('利用') || t.includes('生成') || t.includes('generat'))) {
+          select.value = opt.value;
+          select.dispatchEvent(new Event('change', { bubbles: true }));
+          console.log('[PixAI→Pixiv] AI flag set via select:', opt.text);
+          return true;
+        }
+      }
+    }
+
+    console.warn('[PixAI→Pixiv] AI flag not found. Run this in console to debug:');
+    console.warn('document.querySelectorAll("label, [role=radio], [role=checkbox]").forEach(e => console.log(e.tagName, e.textContent?.trim()?.substring(0,80)))');
     return false;
   }
 
   async function setAgeRating(rating) {
-    const labels = document.querySelectorAll('label, [role="radio"], [role="button"]');
-    for (const el of labels) {
-      const t = (el.textContent || '').replace(/[\s-]/g, '').toLowerCase();
-      if (rating === 'r18' && t.includes('r18')) {
-        el.click();
-        await sleep(200);
-        return true;
+    console.log(`[PixAI→Pixiv] Setting age rating: ${rating}`);
+
+    const candidates = document.querySelectorAll(
+      'label, [role="radio"], [role="checkbox"], [role="button"], [role="option"], button'
+    );
+
+    // Age rating keywords
+    const ratingKeywords = {
+      'all': ['全年齢', '全年龄', 'all ages', '全年'],
+      'r18': ['r-18', 'r18'],
+    };
+
+    const keywords = ratingKeywords[rating] || ratingKeywords['all'];
+
+    for (const el of candidates) {
+      const t = (el.textContent || '').replace(/\s+/g, '').toLowerCase();
+      for (const kw of keywords) {
+        if (t.includes(kw.replace(/\s+/g, '').toLowerCase())) {
+          console.log(`[PixAI→Pixiv] Age rating candidate: <${el.tagName}> "${el.textContent?.trim()?.substring(0, 60)}"`);
+
+          const input = el.querySelector('input[type="radio"], input[type="checkbox"]');
+          if (input) {
+            input.click();
+            await sleep(200);
+            console.log(`[PixAI→Pixiv] Age rating set to ${rating} via inner input`);
+            return true;
+          }
+
+          el.click();
+          await sleep(200);
+          console.log(`[PixAI→Pixiv] Age rating set to ${rating} via click`);
+          return true;
+        }
       }
     }
+
+    console.warn(`[PixAI→Pixiv] Age rating "${rating}" not found`);
     return false;
   }
 
