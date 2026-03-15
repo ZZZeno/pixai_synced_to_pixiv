@@ -249,12 +249,6 @@
       tags = intersection;
     }
 
-    // Always add AI tags
-    const seen = new Set(tags);
-    for (const t of ['AIイラスト', 'AI生成', 'PixAI']) {
-      if (!seen.has(t)) { seen.add(t); tags.push(t); }
-    }
-
     return tags.slice(0, 10); // Pixiv max 10
   }
 
