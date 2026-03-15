@@ -237,17 +237,20 @@
   // ── Tag Merger ──────────────────────────────────────────────────
 
   function buildMergedTags(queue) {
-    const seen = new Set();
-    const tags = [];
+    let tags;
 
-    // Collect all unique tags from all artworks
-    for (const a of queue) {
-      for (const t of (a.tags || [])) {
-        if (!seen.has(t)) { seen.add(t); tags.push(t); }
-      }
+    if (queue.length === 1) {
+      // Single artwork: use all its tags
+      tags = [...(queue[0].tags || [])];
+    } else {
+      // Multiple artworks: intersection only (tags present in ALL artworks)
+      const tagSets = queue.map(a => new Set(a.tags || []));
+      const intersection = [...tagSets[0]].filter(t => tagSets.every(s => s.has(t)));
+      tags = intersection;
     }
 
     // Always add AI tags
+    const seen = new Set(tags);
     for (const t of ['AIイラスト', 'AI生成', 'PixAI']) {
       if (!seen.has(t)) { seen.add(t); tags.push(t); }
     }

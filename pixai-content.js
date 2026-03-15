@@ -63,8 +63,9 @@
       for (const tack of artwork.tacks) {
         const jaName = tack.tackTerms?.find(t => t.category === 'ja')?.name;
         const enName = tack.tackTerms?.find(t => t.category === 'en')?.name;
-        if (jaName) tags.push(jaName);
-        if (enName && enName !== jaName) tags.push(enName);
+        // Skip tags containing spaces
+        if (jaName && !jaName.includes(' ')) tags.push(jaName);
+        if (enName && enName !== jaName && !enName.includes(' ')) tags.push(enName);
       }
     }
 
