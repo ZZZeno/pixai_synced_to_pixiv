@@ -256,7 +256,8 @@
   // ── Init ─────────────────────────────────────────────────────────
 
   function init() {
-    if (!window.location.pathname.match(/^\/artwork\/\d+/)) return;
+    if (!window.location.pathname.startsWith('/artwork/')) return;
+    console.log('[PixAI→Pixiv] Init on:', window.location.href);
     setTimeout(createButton, 800);
   }
 
