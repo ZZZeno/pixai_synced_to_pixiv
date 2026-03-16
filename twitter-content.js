@@ -282,38 +282,60 @@
         return false;
       }
 
-      console.log(`[PixAI→Twitter] Using file input:`, fileInput.accept, fileInput.dataset?.testid);
+      // Method 1: Clipboard paste (most reliable for React apps)
+      console.log('[PixAI→Twitter] Trying clipboard paste method...');
+      const editor = document.querySelector('[data-testid="tweetTextarea_0"] [role="textbox"]')
+        || document.querySelector('[contenteditable="true"][role="textbox"]');
 
-      // Use DataTransfer to set files and dispatch change event
-      const dt = new DataTransfer();
-      files.forEach(f => dt.items.add(f));
+      if (editor) {
+        for (let i = 0; i < files.length; i++) {
+          const dt = new DataTransfer();
+          dt.items.add(files[i]);
 
-      // Native setter to bypass React's control
-      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'files')?.set;
-      if (nativeSetter) {
-        nativeSetter.call(fileInput, dt.files);
-      } else {
+          const pasteEvent = new ClipboardEvent('paste', {
+            bubbles: true,
+            cancelable: true,
+            clipboardData: dt,
+          });
+
+          editor.focus();
+          await sleep(200);
+          editor.dispatchEvent(pasteEvent);
+          console.log(`[PixAI→Twitter] Pasted image ${i + 1}/${files.length}`);
+          await sleep(1500); // Wait for Twitter to process each image
+        }
+
+        // Check if images appeared
+        await sleep(1000);
+        const previews = document.querySelectorAll('[data-testid="attachments"] img, [data-testid="mediaPreview"] img, [data-testid*="media"] img');
+        if (previews.length > 0) {
+          console.log(`[PixAI→Twitter] ${previews.length} image previews detected via paste ✓`);
+          return true;
+        }
+        console.warn('[PixAI→Twitter] Paste method: no previews detected');
+      }
+
+      // Method 2: File input (fallback)
+      console.log(`[PixAI→Twitter] Trying file input method... accept="${fileInput?.accept}"`);
+      if (fileInput) {
+        const dt = new DataTransfer();
+        files.forEach(f => dt.items.add(f));
         fileInput.files = dt.files;
+        fileInput.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
+        fileInput.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
+        await sleep(2000);
+
+        const previews = document.querySelectorAll('[data-testid="attachments"] img, [data-testid="mediaPreview"] img');
+        if (previews.length > 0) {
+          console.log(`[PixAI→Twitter] ${previews.length} image previews via file input ✓`);
+          return true;
+        }
+        console.warn('[PixAI→Twitter] File input method: no previews detected');
       }
 
-      // Dispatch both change and input events
-      fileInput.dispatchEvent(new Event('change', { bubbles: true, composed: true }));
-      fileInput.dispatchEvent(new Event('input', { bubbles: true, composed: true }));
-      await sleep(1500);
-
-      // Verify images appeared (check for image preview thumbnails)
-      const previews = document.querySelectorAll('[data-testid="attachments"] img, [data-testid="mediaPreview"] img');
-      if (previews.length > 0) {
-        console.log(`[PixAI→Twitter] ${previews.length} image previews detected ✓`);
-      } else {
-        console.warn('[PixAI→Twitter] No image previews detected — upload may have failed');
-        // Try drag-and-drop as fallback
-        console.log('[PixAI→Twitter] Trying drag-and-drop fallback...');
-        return await uploadViaDropFallback(files);
-      }
-
-      console.log(`[PixAI→Twitter] ${files.length} images uploaded ✓`);
-      return true;
+      // Method 3: Drag-and-drop (last resort)
+      console.log('[PixAI→Twitter] Trying drag-and-drop fallback...');
+      return await uploadViaDropFallback(files);
     } catch (e) {
       console.error('[PixAI→Twitter] Image upload failed:', e);
       return false;
