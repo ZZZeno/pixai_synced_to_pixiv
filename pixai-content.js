@@ -308,8 +308,8 @@
       if (!match) continue;
       const artworkId = match[1];
       
-      // Find the card container (the link itself or its parent)
-      const card = link.closest('[class*="card"], [class*="item"], [class*="grid"]') || link;
+      // Find the image container div (the one with position:relative and the thumbnail)
+      const card = link.querySelector('div.relative') || link;
       
       // Make sure the card has position:relative for absolute positioning
       const cardStyle = getComputedStyle(card);
