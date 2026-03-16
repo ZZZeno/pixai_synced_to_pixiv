@@ -323,12 +323,14 @@
         <button class="p2p-card-btn p2p-card-twitter" data-id="${artworkId}" data-target="twitter" title="𝕏キューに追加">𝕏</button>
       `;
       
-      // Show/hide via JS mouseenter/mouseleave on the link
-      link.addEventListener('mouseenter', () => btns.style.opacity = '1');
-      link.addEventListener('mouseleave', () => {
-        if (!btns.matches(':hover')) btns.style.opacity = '0';
-      });
-      btns.addEventListener('mouseleave', () => btns.style.opacity = '0');
+      // Show/hide with debounce to prevent flickering
+      let hideTimer = null;
+      const showBtns = () => { clearTimeout(hideTimer); btns.style.opacity = '1'; };
+      const hideBtns = () => { hideTimer = setTimeout(() => { btns.style.opacity = '0'; }, 200); };
+      link.addEventListener('pointerenter', showBtns);
+      link.addEventListener('pointerleave', hideBtns);
+      btns.addEventListener('pointerenter', showBtns);
+      btns.addEventListener('pointerleave', hideBtns);
       
       // Prevent link navigation when clicking buttons
       btns.addEventListener('click', (e) => {
