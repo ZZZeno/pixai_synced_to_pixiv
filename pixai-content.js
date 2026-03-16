@@ -296,26 +296,21 @@
   }
 
   function injectListButtons() {
-    // Find all artwork card links that don't already have our buttons
+    // Find all artwork card links
     const links = document.querySelectorAll('a[href*="/artwork/"]');
     
     for (const link of links) {
       // Skip if already injected
-      if (link.querySelector('.p2p-card-btns')) continue;
+      if (link.dataset.p2pInjected) continue;
+      link.dataset.p2pInjected = '1';
       
       // Extract artwork ID from href
       const match = link.href.match(/\/artwork\/(\d+)/);
       if (!match) continue;
       const artworkId = match[1];
       
-      // Find the image container div (the one with position:relative and the thumbnail)
-      const card = link.querySelector('div.relative') || link;
-      
-      // Make sure the card has position:relative for absolute positioning
-      const cardStyle = getComputedStyle(card);
-      if (cardStyle.position === 'static') {
-        card.style.position = 'relative';
-      }
+      // Find the image area: first div.relative with overflow-hidden inside the link
+      const imageContainer = link.querySelector('div.relative.w-full') || link.querySelector('div.relative') || link;
       
       // Create button overlay
       const btns = document.createElement('div');
@@ -324,6 +319,13 @@
         <button class="p2p-card-btn p2p-card-pixiv" data-id="${artworkId}" data-target="pixiv" title="Pixivキューに追加">P</button>
         <button class="p2p-card-btn p2p-card-twitter" data-id="${artworkId}" data-target="twitter" title="𝕏キューに追加">𝕏</button>
       `;
+      
+      // Show/hide via JS mouseenter/mouseleave on the link
+      link.addEventListener('mouseenter', () => btns.style.opacity = '1');
+      link.addEventListener('mouseleave', () => {
+        if (!btns.matches(':hover')) btns.style.opacity = '0';
+      });
+      btns.addEventListener('mouseleave', () => btns.style.opacity = '0');
       
       // Prevent link navigation when clicking buttons
       btns.addEventListener('click', (e) => {
@@ -335,6 +337,7 @@
         btn.addEventListener('click', async (e) => {
           e.preventDefault();
           e.stopPropagation();
+          e.stopImmediatePropagation();
           const id = btn.dataset.id;
           const target = btn.dataset.target;
           btn.textContent = '…';
@@ -357,7 +360,7 @@
         });
       });
       
-      card.appendChild(btns);
+      imageContainer.appendChild(btns);
     }
   }
 

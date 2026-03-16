@@ -145,17 +145,7 @@
   gap: 4px;
   z-index: 100;
   opacity: 0;
-  transition: opacity 0.2s;
-  pointer-events: none;
-}
-
-/* Show on hover: any ancestor hover triggers visibility */
-a:hover .p2p-card-btns,
-div:hover > .p2p-card-btns,
-.p2p-card-btns:hover,
-.p2p-card-btns.p2p-card-btns-visible {
-  opacity: 1;
-  pointer-events: auto;
+  transition: opacity 0.15s;
 }
 
 .p2p-card-btn {
