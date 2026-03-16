@@ -143,10 +143,13 @@
   right: 6px;
   display: flex;
   gap: 4px;
-  z-index: 100;
+  z-index: 20;
   opacity: 0;
   transition: opacity 0.15s;
 }
+
+/* Debug: always show for testing — remove after confirmed working */
+/* .p2p-card-btns { opacity: 1 !important; } */
 
 .p2p-card-btn {
   width: 28px;

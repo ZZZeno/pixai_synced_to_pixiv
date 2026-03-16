@@ -309,8 +309,11 @@
       if (!match) continue;
       const artworkId = match[1];
       
-      // Find the image area: first div.relative with overflow-hidden inside the link
-      const imageContainer = link.querySelector('div.relative.w-full') || link.querySelector('div.relative') || link;
+      // Find the image overlay div (absolute inset-0, inside the overflow-hidden container)
+      const imageContainer = link.querySelector('div.absolute.inset-0') 
+        || link.querySelector('div.relative.w-full') 
+        || link.querySelector('div.relative') 
+        || link;
       
       // Create button overlay
       const btns = document.createElement('div');
