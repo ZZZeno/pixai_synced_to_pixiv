@@ -288,13 +288,150 @@
     return !s ? '' : s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
   }
 
+  // ── List Page: inject buttons on artwork cards ─────────────────
+
+  function isListPage() {
+    // Profile artworks, search results, explore, etc. — anything NOT a single artwork page
+    return !window.location.pathname.match(/\/artwork\/\d/);
+  }
+
+  function injectListButtons() {
+    // Find all artwork card links that don't already have our buttons
+    const links = document.querySelectorAll('a[href*="/artwork/"]');
+    
+    for (const link of links) {
+      // Skip if already injected
+      if (link.querySelector('.p2p-card-btns')) continue;
+      
+      // Extract artwork ID from href
+      const match = link.href.match(/\/artwork\/(\d+)/);
+      if (!match) continue;
+      const artworkId = match[1];
+      
+      // Find the card container (the link itself or its parent)
+      const card = link.closest('[class*="card"], [class*="item"], [class*="grid"]') || link;
+      
+      // Make sure the card has position:relative for absolute positioning
+      const cardStyle = getComputedStyle(card);
+      if (cardStyle.position === 'static') {
+        card.style.position = 'relative';
+      }
+      
+      // Create button overlay
+      const btns = document.createElement('div');
+      btns.className = 'p2p-card-btns';
+      btns.innerHTML = `
+        <button class="p2p-card-btn p2p-card-pixiv" data-id="${artworkId}" data-target="pixiv" title="Pixivキューに追加">P</button>
+        <button class="p2p-card-btn p2p-card-twitter" data-id="${artworkId}" data-target="twitter" title="𝕏キューに追加">𝕏</button>
+      `;
+      
+      // Prevent link navigation when clicking buttons
+      btns.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      });
+      
+      btns.querySelectorAll('.p2p-card-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const target = btn.dataset.target;
+          btn.textContent = '…';
+          btn.disabled = true;
+          
+          try {
+            const data = await fetchArtworkData(id);
+            const result = await chrome.runtime.sendMessage({ action: 'addToQueue', data, target });
+            btn.textContent = '✓';
+            btn.classList.add('p2p-card-btn-done');
+            updateQueueBadge();
+          } catch (err) {
+            console.error(`[PixAI→Pixiv] Failed to add ${id}:`, err);
+            btn.textContent = '✗';
+            setTimeout(() => {
+              btn.textContent = target === 'twitter' ? '𝕏' : 'P';
+              btn.disabled = false;
+            }, 2000);
+          }
+        });
+      });
+      
+      card.appendChild(btns);
+    }
+  }
+
+  // Batch select toolbar for list pages
+  function createListToolbar() {
+    if (document.getElementById('p2p-list-toolbar')) return;
+    if (!isListPage()) return;
+    
+    // Check if there are any artwork links on page
+    const hasArtworks = document.querySelector('a[href*="/artwork/"]');
+    if (!hasArtworks) return;
+    
+    const toolbar = document.createElement('div');
+    toolbar.id = 'p2p-list-toolbar';
+    toolbar.innerHTML = `
+      <div class="p2p-toolbar-inner">
+        <span class="p2p-toolbar-label">🎨 PixAI Publisher</span>
+        <span class="p2p-toolbar-badges">
+          <span class="p2p-queue-badge" id="p2p-badge-pixiv-toolbar" style="display:none;">P: 0</span>
+          <span class="p2p-queue-badge p2p-badge-twitter" id="p2p-badge-twitter-toolbar" style="display:none;">𝕏: 0</span>
+        </span>
+      </div>
+    `;
+    document.body.appendChild(toolbar);
+    updateQueueBadge();
+  }
+
+  // Override updateQueueBadge to also update toolbar badges
+  const _origUpdateQueueBadge = updateQueueBadge;
+  updateQueueBadge = async function() {
+    const res = await chrome.runtime.sendMessage({ action: 'getQueue' });
+    const pixivCount = res?.pixiv?.length || res?.data?.length || 0;
+    const twitterCount = res?.twitter?.length || 0;
+
+    // Artwork page badges
+    const bPixiv = document.getElementById('p2p-badge-pixiv');
+    if (bPixiv) {
+      bPixiv.textContent = pixivCount;
+      bPixiv.style.display = pixivCount > 0 ? 'inline-flex' : 'none';
+    }
+    const bTwitter = document.getElementById('p2p-badge-twitter');
+    if (bTwitter) {
+      bTwitter.textContent = twitterCount;
+      bTwitter.style.display = twitterCount > 0 ? 'inline-flex' : 'none';
+    }
+    
+    // Toolbar badges
+    const tbPixiv = document.getElementById('p2p-badge-pixiv-toolbar');
+    if (tbPixiv) {
+      tbPixiv.textContent = `P: ${pixivCount}`;
+      tbPixiv.style.display = pixivCount > 0 ? 'inline-flex' : 'none';
+    }
+    const tbTwitter = document.getElementById('p2p-badge-twitter-toolbar');
+    if (tbTwitter) {
+      tbTwitter.textContent = `𝕏: ${twitterCount}`;
+      tbTwitter.style.display = twitterCount > 0 ? 'inline-flex' : 'none';
+    }
+  };
+
   // ── Init ─────────────────────────────────────────────────────────
 
   function init() {
-    // Support /artwork/ID and /lang/artwork/ID (e.g. /ja/artwork/123)
-    if (!window.location.pathname.match(/\/artwork\//)) return;
-    console.log('[PixAI→Pixiv] Init on:', window.location.href);
-    setTimeout(createButton, 800);
+    if (window.location.pathname.match(/\/artwork\/\d/)) {
+      // Single artwork page
+      console.log('[PixAI→Pixiv] Init artwork page:', window.location.href);
+      setTimeout(createButton, 800);
+    } else {
+      // List page (profile, search, explore, etc.)
+      console.log('[PixAI→Pixiv] Init list page:', window.location.href);
+      setTimeout(() => {
+        injectListButtons();
+        createListToolbar();
+      }, 1500);
+    }
   }
 
   let lastUrl = location.href;
@@ -302,7 +439,12 @@
     if (location.href !== lastUrl) {
       lastUrl = location.href;
       document.getElementById(BUTTON_ID)?.remove();
+      document.getElementById('p2p-list-toolbar')?.remove();
       init();
+    }
+    // Re-inject on list pages as new cards load (infinite scroll)
+    if (isListPage()) {
+      injectListButtons();
     }
   }).observe(document.body, { childList: true, subtree: true });
 
