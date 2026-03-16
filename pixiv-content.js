@@ -154,7 +154,20 @@
         });
 
         if (!response?.success || !response.dataUrl) {
-          console.error(`[PixAI→Pixiv] Failed to download image ${i + 1}`);
+          console.error(`[PixAI→Pixiv] Failed to download image ${i + 1}:`, imageUrls[i], response?.error);
+          // Try alternate URL (thumb → orig or vice versa)
+          const altUrl = imageUrls[i].replace('/thumb/', '/orig/').replace('/orig/', imageUrls[i].includes('/orig/') ? '/orig/' : '/thumb/');
+          if (altUrl !== imageUrls[i]) {
+            console.log(`[PixAI→Pixiv] Trying alt URL: ${altUrl}`);
+            const altResponse = await chrome.runtime.sendMessage({ action: 'downloadImage', url: altUrl });
+            if (altResponse?.success && altResponse.dataUrl) {
+              const blob = dataUrlToBlob(altResponse.dataUrl);
+              const mime = altResponse.converted ? 'image/png' : (blob.type || 'image/png');
+              const ext = mime.includes('png') ? 'png' : 'jpg';
+              files.push(new File([blob], `pixai_${i + 1}.${ext}`, { type: mime }));
+              continue;
+            }
+          }
           continue;
         }
 
