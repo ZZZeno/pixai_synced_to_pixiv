@@ -146,12 +146,18 @@
     return parts.join('\n');
   }
 
+  // Twitter hashtags only allow letters, numbers, underscores (incl. CJK)
+  // Drop tags with special chars like ：, /, !, etc.
+  function isValidHashtag(tag) {
+    return /^[\w\u3000-\u9FFF\uF900-\uFAFF\uFF66-\uFF9F\u30A0-\u30FF\u3040-\u309F\uAC00-\uD7AF]+$/u.test(tag);
+  }
+
   function getTagsForTweet(queue) {
-    // Same logic as Pixiv: intersection for multi, skip spaces
     const allTagSets = queue.map(artwork => {
       const tags = (artwork.tags || [])
         .filter(t => !t.includes(' '))  // skip tags with spaces
-        .filter(t => t !== 'PixAI');
+        .filter(t => t !== 'PixAI')
+        .filter(t => isValidHashtag(t));  // skip tags with special chars
       return new Set(tags);
     });
 
