@@ -233,13 +233,15 @@
       return parts.join('\n');
     }
 
-    // Multi-image: just titles + source links
-    let lines = [];
+    // Multi-image: titles + source links, separated by blank lines
+    let blocks = [];
     queue.forEach((a, i) => {
-      if (a.title) lines.push(`[${i + 1}] ${a.title}`);
-      if (a.sourceUrl) lines.push(a.sourceUrl);
+      let block = [];
+      if (a.title) block.push(`[${i + 1}] ${a.title}`);
+      if (a.sourceUrl) block.push(a.sourceUrl);
+      if (block.length) blocks.push(block.join('\n'));
     });
-    return lines.join('\n').trim();
+    return blocks.join('\n\n').trim();
   }
 
   // ── Tag Merger ──────────────────────────────────────────────────
